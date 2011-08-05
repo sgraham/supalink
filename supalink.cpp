@@ -42,10 +42,23 @@ static void Fallback(const char* msg = 0)
     startupInfo.dwFlags = STARTF_USESTDHANDLES;
     string origCmd(GetCommandLine());
 
-    string linkexe = "link.exe ";
-    string::size_type at = origCmd.find(linkexe, 0);
-    if (at == string::npos) Fatal("Couldn't find link.exe in command line");
-    string cmd = origCmd.replace(at, linkexe.size(), "link.exe.supalink_orig.exe ");
+    const char* searchFor[] = {
+        "link.exe ",
+        "LINK.EXE ",
+        "link ",
+        "LINK ",
+    };
+    string cmd;
+    for (size_t i = 0; i < sizeof(searchFor) / sizeof(searchFor[0]); ++i)
+    {
+        string linkexe = searchFor[i];
+        string::size_type at = origCmd.find(linkexe, 0);
+        if (at == string::npos)
+            continue;
+        cmd = origCmd.replace(at, linkexe.size(), "link.exe.supalink_orig.exe ");
+    }
+    if (cmd == "")
+        Fatal("Couldn't find link.exe (or similar) in command line");
     fprintf(stdout, "supalink running '%s'\n", cmd.c_str());
     fflush(stdout);
     if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &startupInfo, &processInfo))
@@ -92,12 +105,27 @@ void DumpFile(const char* path, wstring& contents)
 // %REALLINK%.supalink_orig.exe
 int main(int argc, char** argv)
 {
+    fprintf(stderr, "GetCommandLine(): '%s'\n", GetCommandLine());
+    fflush(stderr);
+
+    int rspFileIndex = -1;
+
     if (argc < 2)
         Fallback("too few commmand line args");
-    if (argv[1][0] != '@')
-        Fallback("argv[1] isn't a response file");
 
-    wstring rsp = SlurpFile(&argv[1][1]);
+    for (int i = 1; i < argc; ++i)
+    {
+        if (argv[i][0] == '@')
+        {
+            rspFileIndex = i;
+            break;
+        }
+    }
+
+    if (rspFileIndex == -1)
+        Fallback("couldn't find a response file in argv");
+
+    wstring rsp = SlurpFile(&argv[rspFileIndex][1]);
 
     // The first line of this file is all we try to fix. It's a bunch of
     // quoted space separated items. Simplest thing seems to be replacing " "
@@ -113,9 +141,9 @@ int main(int argc, char** argv)
         next += replace.length();
     }
 
-    DumpFile(&argv[1][1], rsp);
+    DumpFile(&argv[rspFileIndex][1], rsp);
 
-    string backupCopy(&argv[1][1]);
+    string backupCopy(&argv[rspFileIndex][1]);
     backupCopy += ".copy";
     DumpFile(backupCopy.c_str(), rsp);
 
