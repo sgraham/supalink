@@ -105,8 +105,8 @@ void DumpFile(const char* path, wstring& contents)
 // %REALLINK%.supalink_orig.exe
 int main(int argc, char** argv)
 {
-    fprintf(stderr, "GetCommandLine(): '%s'\n", GetCommandLine());
-    fflush(stderr);
+    //fprintf(stderr, "GetCommandLine(): '%s'\n", GetCommandLine());
+    //fflush(stderr);
 
     int rspFileIndex = -1;
 
