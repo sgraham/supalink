@@ -27,15 +27,15 @@ set SAVETO=%REALLINK%.supalink_orig.exe
 if exist "%SAVETO%" goto alreadyexists
 
 echo.
-echo Going to save original link.exe at
+echo Going to save original link.exe from:
 echo.
 echo   %REALLINK%
 echo.
-echo as
+echo as:
 echo.
 echo   %SAVETO%
 echo.
-echo (and the associated .config files) and replace link.exe with supalink.exe.
+echo (as well as the associated .config file) and replace link.exe with supalink.exe.
 echo.
 echo OK? (Ctrl-C to cancel)
 pause
