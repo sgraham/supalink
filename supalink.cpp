@@ -27,6 +27,16 @@ static void Fatal(const char* msg)
     exit(1);
 }
 
+static string ErrorMessageToString(DWORD err)
+{
+    LPTSTR msgBuf = NULL;
+    FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM, NULL, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&msgBuf, 0, NULL);
+    string ret(msgBuf);
+    LocalFree(msgBuf);
+    return ret;
+}
+
+
 static void Fallback(const char* msg = 0)
 {
     if (msg)
@@ -47,22 +57,38 @@ static void Fallback(const char* msg = 0)
         "LINK.EXE ",
         "link ",
         "LINK ",
+        "link.exe\" ",
+        "LINK.EXE\" ",
+        "link\" ",
+        "LINK\" ",
     };
     string cmd;
+    string replaceWith = "link.exe.supalink_orig.exe";
     for (size_t i = 0; i < sizeof(searchFor) / sizeof(searchFor[0]); ++i)
     {
         string linkexe = searchFor[i];
         string::size_type at = origCmd.find(linkexe, 0);
         if (at == string::npos)
             continue;
-        cmd = origCmd.replace(at, linkexe.size(), "link.exe.supalink_orig.exe ");
+        if (linkexe[linkexe.size() - 2] == '"')
+            replaceWith += "\" ";
+        else
+            replaceWith += " ";
+        cmd = origCmd.replace(at, linkexe.size(), replaceWith);
+        break;
     }
     if (cmd == "")
+    {
+        fprintf(stdout, "Original run '%s'\n", origCmd.c_str());
         Fatal("Couldn't find link.exe (or similar) in command line");
+    }
     fprintf(stdout, "supalink running '%s'\n", cmd.c_str());
     fflush(stdout);
     if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &startupInfo, &processInfo))
-        Fatal("CreateProcess");
+    {
+        string error = ErrorMessageToString(GetLastError());
+        Fatal(error.c_str());
+    }
     WaitForSingleObject(processInfo.hProcess, INFINITE);
     GetExitCodeProcess(processInfo.hProcess, &exitCode);
     CloseHandle(processInfo.hProcess);
