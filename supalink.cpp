@@ -57,6 +57,7 @@ static void Fallback(const char* msg = 0)
     if (msg)
     {
         fprintf(stdout, "supalink failed (%s), trying to fallback to standard link.\n", msg);
+        fprintf(stdout, "Original command line: %s\n", GetCommandLine());
         fflush(stdout);
     }
 
