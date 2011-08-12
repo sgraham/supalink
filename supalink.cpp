@@ -98,7 +98,7 @@ static void Fallback(const char* msg = 0)
         fprintf(stdout, "Original run '%s'\n", origCmd.c_str());
         Fatal("Couldn't find link.exe (or similar) in command line");
     }
-    fprintf(stdout, "supalink running '%s'\n", cmd.c_str());
+    fprintf(stdout, "  running '%s'\n", cmd.c_str());
     fflush(stdout);
     if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &startupInfo, &processInfo))
     {
@@ -167,6 +167,8 @@ int main(int argc, char** argv)
     if (rspFileIndex == -1)
         Fallback("couldn't find a response file in argv");
 
+    //ULONGLONG startTime = GetTickCount64();
+
     wstring rsp = SlurpFile(&argv[rspFileIndex][1]);
 
     // The first line of this file is all we try to fix. It's a bunch of
@@ -174,20 +176,33 @@ int main(int argc, char** argv)
     // with "\n". So, just slurp the file, replace, spit it out to the same
     // file and continue on our way.
 
-    wstring search = L"\" \"";
-    wstring replace = L"\"\r\n\"";
-    wstring::size_type next;
-    for (next = rsp.find(search); next != string::npos; next = rsp.find(search, next))
+    // Took about .5s when using the naive .replace loop to replace " " with
+    // "\r\n" so write the silly loop instead.
+    wstring fixed;
+    fixed.reserve(rsp.size() * 2);
+
+    for (const wchar_t* s = rsp.c_str(); *s;)
     {
-        rsp.replace(next, search.length(), replace);
-        next += replace.length();
+        if (*s == '"' && *(s + 1) == ' ' && *(s + 2) == '"')
+        {
+            fixed += L"\"\r\n\"";
+            s += 3;
+        }
+        else
+        {
+            fixed += *s++;
+        }
     }
 
-    DumpFile(&argv[rspFileIndex][1], rsp);
+    DumpFile(&argv[rspFileIndex][1], fixed);
 
     string backupCopy(&argv[rspFileIndex][1]);
     backupCopy += ".copy";
-    DumpFile(backupCopy.c_str(), rsp);
+    DumpFile(backupCopy.c_str(), fixed);
+
+    //ULONGLONG endTime = GetTickCount64();
+
+    //fprintf(stdout, "  took %.2fs to modify @rsp file\n", (endTime - startTime) / 1000.0);
 
     Fallback();
 }
