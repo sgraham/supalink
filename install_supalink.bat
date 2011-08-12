@@ -40,6 +40,7 @@ for %%i in (link.exe) do @set REALLINK=%%~$PATH:i
 set SAVETO=%REALLINK%.supalink_orig.exe
 
 if exist "%SAVETO%" goto alreadyexists
+:continueafterexists
 
 echo.
 echo Going to save original link.exe from:
@@ -67,7 +68,12 @@ echo Maybe run vsvars32.bat first?
 goto done
 
 :alreadyexists
-echo Backup location "%SAVETO%" already exists. You probably want to restore that to link.exe first.
-goto done
+echo.
+echo Backup location "%SAVETO%" already exists.
+echo.
+echo Restoring that to original link.exe first, OK?
+pause
+move /y "%SAVETO%" "%REALLINK%"
+goto continueafterexists
 
 :done
