@@ -65,7 +65,6 @@ static void Fallback(const char* msg = 0)
     PROCESS_INFORMATION processInfo;
     DWORD exitCode;
 
-    startupInfo.dwFlags = STARTF_USESTDHANDLES;
     string origCmd(GetCommandLine());
 
     const char* searchFor[] = {
