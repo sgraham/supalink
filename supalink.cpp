@@ -68,14 +68,14 @@ static void Fallback(const char* msg = 0)
     string origCmd(GetCommandLine());
 
     const char* searchFor[] = {
-        "link.exe ",
-        "LINK.EXE ",
-        "link ",
-        "LINK ",
         "link.exe\" ",
         "LINK.EXE\" ",
         "link\" ",
         "LINK\" ",
+        "link.exe ",
+        "LINK.EXE ",
+        "link ",
+        "LINK ",
     };
     string cmd;
     string replaceWith = "link.exe.supalink_orig.exe";
