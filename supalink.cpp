@@ -76,6 +76,14 @@ static void Fallback(const char* msg = 0)
         "LINK.EXE ",
         "link ",
         "LINK ",
+		"lib.exe\" ",
+        "LIB.EXE\" ",
+        "lib\" ",
+        "LIB\" ",
+        "lib.exe ",
+        "LIB.EXE ",
+        "lib ",
+        "LIB ",
     };
     string cmd;
     string replaceWith = "link.exe.supalink_orig.exe";
