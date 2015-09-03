@@ -26,19 +26,21 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-
+#include <locale>
+#include <iostream>
+#include <algorithm>
 #include <windows.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdlib>
 #include <string>
 
 using namespace std;
 
 // Don't use stderr for errors because VS has large buffers on them, leading
 // to confusing error output.
-static void Fatal(const char* msg)
+static void Fatal(const string msg)
 {
-    fprintf(stdout, "supalink fatal error: %s\n", msg);
+    cout << "supalink fatal error: " << msg << endl;
     exit(1);
 }
 
@@ -51,46 +53,67 @@ static string ErrorMessageToString(DWORD err)
     return ret;
 }
 
+// templated version of my_equal so it could work with both char and wchar_t
+template<typename charT>
+struct my_equal {
+    my_equal( const std::locale& loc ) : loc_(loc) {}
+    my_equal& operator=(const my_equal& other) { loc_ = other.loc_; return *this; }
+    bool operator()(charT ch1, charT ch2) {
+        return std::toupper(ch1, loc_) == std::toupper(ch2, loc_);
+    }
+private:
+    const std::locale& loc_;
+};
 
-static void Fallback(const char* msg = 0)
+// find substring (case insensitive)
+template<typename T>
+typename T::size_type ci_find_substr( const T& str1, const T& str2, const std::locale& loc = std::locale() )
 {
-    if (msg)
+    typename T::const_iterator it = std::search( str1.begin(), str1.end(), 
+        str2.begin(), str2.end(), my_equal<typename T::value_type>(loc) );
+    if ( it != str1.end() ) return it - str1.begin();
+    else return string::npos; // not found
+}
+
+static void Fallback(const string msg = "")
+{
+    string origCmd(GetCommandLine());
+    
+    if (msg != "")
     {
-        fprintf(stdout, "supalink failed (%s), trying to fallback to standard link.\n", msg);
-        fprintf(stdout, "Original command line: %s\n", GetCommandLine());
-        fflush(stdout);
+        cout << "supalink failed (" << msg << "), trying to fallback to standard link." << endl;
+        cout << "Original command line: "<< origCmd << endl;
+        cout.flush();
     }
 
     STARTUPINFO startupInfo = { sizeof(STARTUPINFO) };
     PROCESS_INFORMATION processInfo;
     DWORD exitCode;
 
-    string origCmd(GetCommandLine());
-
-    const char* searchFor[] = {
+    const string searchFor[] = {
         "link.exe\" ",
-        "LINK.EXE\" ",
         "link\" ",
-        "LINK\" ",
         "link.exe ",
-        "LINK.EXE ",
         "link ",
-        "LINK ",
-		"lib.exe\" ",
-        "LIB.EXE\" ",
+        "lib.exe\" ",
         "lib\" ",
-        "LIB\" ",
         "lib.exe ",
-        "LIB.EXE ",
         "lib ",
-        "LIB ",
+        "dumpbin.exe\" ",
+        "dumpbin\" ",
+        "dumpbin.exe ",
+        "dumpbin ",
+        "editbin.exe\" ",
+        "editbin\" ",
+        "editbin.exe ",
+        "editbin ",
     };
     string cmd;
     string replaceWith = "link.exe.supalink_orig.exe";
     for (size_t i = 0; i < sizeof(searchFor) / sizeof(searchFor[0]); ++i)
     {
         string linkexe = searchFor[i];
-        string::size_type at = origCmd.find(linkexe, 0);
+        string::size_type at = ci_find_substr(origCmd, linkexe);
         if (at == string::npos)
             continue;
         if (linkexe[linkexe.size() - 2] == '"')
@@ -102,15 +125,15 @@ static void Fallback(const char* msg = 0)
     }
     if (cmd == "")
     {
-        fprintf(stdout, "Original run '%s'\n", origCmd.c_str());
+        cout << "Original run '" << origCmd << "'" << endl;
         Fatal("Couldn't find link.exe (or similar) in command line");
     }
-    fprintf(stdout, "  running '%s'\n", cmd.c_str());
-    fflush(stdout);
+    cout << "  running '"<< cmd << "'" << endl;
+    cout.flush();
     if (!CreateProcess(NULL, (LPSTR)cmd.c_str(), NULL, NULL, TRUE, 0, NULL, NULL, &startupInfo, &processInfo))
     {
         string error = ErrorMessageToString(GetLastError());
-        Fatal(error.c_str());
+        Fatal(error);
     }
     WaitForSingleObject(processInfo.hProcess, INFINITE);
     GetExitCodeProcess(processInfo.hProcess, &exitCode);
